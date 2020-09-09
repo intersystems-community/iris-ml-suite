@@ -8,5 +8,9 @@ spec:
   ports:
     - port: 52773
       targetPort: 52773
+      name: web
+    - port: 51773
+      targetPort: 51773
+      name: server
   selector:
     app: iris-ml

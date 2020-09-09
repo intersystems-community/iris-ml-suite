@@ -17,6 +17,11 @@ spec:
       - image: DOCKER_REPO_NAME:DOCKER_IMAGE_TAG
         imagePullPolicy: Always
         name: ai-ml
+        env:
+        - name: WAIT_HOSTS
+          value: iris-ml:51773
+        args:
+        - predict.py
         ports:
         - containerPort: 8050
           name: web
