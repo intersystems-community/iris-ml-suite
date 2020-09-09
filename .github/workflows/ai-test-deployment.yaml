@@ -68,24 +68,29 @@ jobs:
         docker push "$GCR_LOCATION/$PROJECT_ID/$IRIS_IMAGE:$ORIG_GITHUB_SHA"
         docker push "$GCR_LOCATION/$PROJECT_ID/$AI_IMAGE:$ORIG_GITHUB_SHA"
 
-#    - name: Replace placeholders with values in deployment template
-#      working-directory: ai-test/.gke
-#      run: |
-#        cat iris-deployment.tpl |\
-#        sed "s|DOCKER_REPO_NAME|${GCR_LOCATION}/${PROJECT_ID}/${IMAGE}|" |\
-#        sed "s|DOCKER_IMAGE_TAG|${ORIG_GITHUB_SHA}|" > iris-deployment.yaml
-#        cat iris-deployment.yaml
+    - name: Replace placeholders with values in deployment template
+      working-directory: .gke
+      run: |
+        cat iris-deployment.tpl |\
+        sed "s|DOCKER_REPO_NAME|${GCR_LOCATION}/${PROJECT_ID}/${IRIS_IMAGE}|" |\
+        sed "s|DOCKER_IMAGE_TAG|${ORIG_GITHUB_SHA}|" > iris-deployment.yaml
+        cat iris-deployment.yaml
+        cat ai-deployment.tpl |\
+        sed "s|DOCKER_REPO_NAME|${GCR_LOCATION}/${PROJECT_ID}/${AI_IMAGE}|" |\
+        sed "s|DOCKER_IMAGE_TAG|${ORIG_GITHUB_SHA}|" > ai-deployment.yaml
+        cat ai-deployment.yaml
 
-#    # Deploy the Docker image to the GKE cluster
-#    - name: Deploy to GKE cluster
-#      working-directory: ai-test/.gke
-#      run: |-
-#        kubectl apply -f namespace.yaml
-#
-#        kubectl apply -f iris-deployment.yaml
-#        kubectl apply -f service.yaml
-#        kubectl apply -f ingress.yaml
-#        # kubectl apply -f ingress-rewrite.yaml
-#        kubectl -n $K8S_NAMESPACE get all  
-#        kubectl -n $K8S_NAMESPACE rollout status deployment/iris-ml
-#        kubectl -n $K8S_NAMESPACE get services -o wide
+    # Deploy the Docker image to the GKE cluster
+    - name: Deploy to GKE cluster
+      working-directory: .gke
+      run: |-
+        kubectl apply -f namespace.yaml
+
+        kubectl apply -f iris-deployment.yaml
+        kubectl apply -f ai-deployment.yaml
+        kubectl apply -f iris-service.yaml
+        kubectl apply -f ai-service.yaml
+        kubectl apply -f ingress.yaml
+        # kubectl apply -f ingress-rewrite.yaml
+        kubectl -n $K8S_NAMESPACE rollout status deployment/iris-ml
+        kubectl -n $K8S_NAMESPACE rollout status deployment/ai-ml
