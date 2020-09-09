@@ -1,0 +1,91 @@
+name: AI-test deployment
+
+on:
+  push:
+    branches:
+      - ai-test
+
+env:
+  PROJECT_ID:    ${{ secrets.PROJECT_ID }}
+  GKE_ZONE:      ${{ secrets.GKE_ZONE }}
+  GCR_LOCATION:  ${{ secrets.GCR_LOCATION }}
+  IRIS_IMAGE:    iris
+  AI_IMAGE:      ai-test
+
+  DOMAIN_NAME:   ai-test.myardyas.club
+  GKE_CLUSTER:   ai-test
+  DOCKER_DIR:    ai-test
+
+  K8S_NAMESPACE: ai-test
+
+jobs:
+  setup-build-publish-deploy:
+    timeout-minutes: 10
+    name: Setup, Build, Publish and Deploy
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Set env specific variables
+      run: |-
+        echo "::set-env name=ORIG_GITHUB_SHA::$GITHUB_SHA"
+
+    - name: Print env specific variables
+      run: |-
+        echo "ORIG_GITHUB_SHA: $ORIG_GITHUB_SHA"
+        echo "DOMAIN_NAME: $DOMAIN_NAME"
+        echo "GKE_CLUSTER: $GKE_CLUSTER"
+
+    # Download code
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup gcloud CLI
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '286.0.0'
+        service_account_key: ${{ secrets.GKE_SERVICE_ACCOUNT_KEY }}
+
+    # Configure Docker to use the gcloud command-line tool as a credential
+    # helper for authentication
+    - name: Configure Docker to use the gcloud command-line
+      run: |-
+        gcloud --quiet auth configure-docker
+
+    # Get the GKE credentials so we can deploy to the cluster
+    - name: Get the GKE credentials
+      run: |-
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$PROJECT_ID"
+
+    # Build Docker images
+    - name: Build images
+      run: |-
+        docker build --file iris/Dockerfile --tag "$GCR_LOCATION/$PROJECT_ID/$IRIS_IMAGE:$ORIG_GITHUB_SHA" iris/.
+        docker build --file app/Dockerfile --tag "$GCR_LOCATION/$PROJECT_ID/$AI_IMAGE:$ORIG_GITHUB_SHA" app/.
+
+    # Push the Docker images to Google Container Registry
+    - name: Publish images to GCR
+      run: |-
+        docker push "$GCR_LOCATION/$PROJECT_ID/$IRIS_IMAGE:$ORIG_GITHUB_SHA"
+        docker push "$GCR_LOCATION/$PROJECT_ID/$AI_IMAGE:$ORIG_GITHUB_SHA"
+
+#    - name: Replace placeholders with values in deployment template
+#      working-directory: ai-test/.gke
+#      run: |
+#        cat iris-deployment.tpl |\
+#        sed "s|DOCKER_REPO_NAME|${GCR_LOCATION}/${PROJECT_ID}/${IMAGE}|" |\
+#        sed "s|DOCKER_IMAGE_TAG|${ORIG_GITHUB_SHA}|" > iris-deployment.yaml
+#        cat iris-deployment.yaml
+
+#    # Deploy the Docker image to the GKE cluster
+#    - name: Deploy to GKE cluster
+#      working-directory: ai-test/.gke
+#      run: |-
+#        kubectl apply -f namespace.yaml
+#
+#        kubectl apply -f iris-deployment.yaml
+#        kubectl apply -f service.yaml
+#        kubectl apply -f ingress.yaml
+#        # kubectl apply -f ingress-rewrite.yaml
+#        kubectl -n $K8S_NAMESPACE get all  
+#        kubectl -n $K8S_NAMESPACE rollout status deployment/iris-ml
+#        kubectl -n $K8S_NAMESPACE get services -o wide

@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: iris-ml
+  namespace: ai-test
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io/cluster-issuer: lets-encrypt-production
+#    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+spec:
+  rules:
+  - host: ai-test.myardyas.club
+    http:
+      paths:
+      - backend:
+          serviceName: iris-ml
+          servicePort: 52773
+        path: /(csp|terminal)
+  tls:
+  - hosts:
+    - ai-test.myardyas.club
+    secretName: ai-test.myardyas.club
