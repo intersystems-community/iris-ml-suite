@@ -20,6 +20,10 @@ spec:
           serviceName: iris-ml
           servicePort: 52773
         path: /(csp|terminal)
+      - backend:
+          serviceName: ai-ml
+          servicePort: 8050
+        path: /*
   tls:
   - hosts:
     - ai-test.myardyas.club
